@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { JobInputFormat, JobInputQuality, MediaAnalysis, MediaOption } from '@workspace/api-client-react';
 import { getListJobsQueryKey, useAnalyzeMedia, useCreateJob } from '@workspace/api-client-react';
 import { AppShell } from '@/components/app-shell';
+import { OpeninaryUpload } from '@/components/openinary-upload';
 
 function TypeIcon({ kind, className = 'h-5 w-5' }: { kind: MediaOption['kind']; className?: string }) {
   if (kind === 'audio') return <FileAudio className={className} />;
@@ -135,6 +136,8 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        <section className="mx-auto max-w-[1240px] px-5 py-10 sm:px-8 sm:py-14"><OpeninaryUpload /></section>
 
         <section className="bg-secondary text-secondary-foreground">
           <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-14 sm:px-8 sm:py-20 md:grid-cols-[1fr_1.2fr] md:items-center">
