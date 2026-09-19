@@ -3,5 +3,7 @@
   "buildCommand": "pnpm --filter @workspace/free-media-toolkit run build",
   "outputDirectory": "artifacts/free-media-toolkit/dist/public",
   "framework": "vite",
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/((?!api(?:/|$)|assets(?:/|$)).*)", "destination": "/index.html" }
+  ]
 }
