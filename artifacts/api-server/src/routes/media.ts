@@ -14,6 +14,7 @@ import {
 import { providerDefinitions } from "./providers";
 import { db, mediaJobs } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
+import { mediaJobsCacheKey, mediaRateLimit, redis } from "../lib/redis";
 
 type MediaOption = {
   id: string;
@@ -169,7 +170,15 @@ function expireJobs() {
 
 export const mediaRouter: IRouter = Router();
 
-mediaRouter.post("/analyze", (req, res) => {
+async function enforceRateLimit(req: { ip?: string }, res: { status: (code: number) => { json: (body: unknown) => void } }) {
+  const result = await mediaRateLimit.limit(req.ip || "anonymous");
+  if (result.success) return true;
+  res.status(429).json({ error: "Too many requests. Please try again shortly." });
+  return false;
+}
+
+mediaRouter.post("/analyze", async (req, res) => {
+  if (!(await enforceRateLimit(req, res))) return;
   const parsed = AnalyzeMediaBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Enter a valid public media URL." });
@@ -195,6 +204,7 @@ mediaRouter.get("/jobs", async (_req, res) => {
 });
 
 mediaRouter.post("/jobs", async (req, res) => {
+  if (!(await enforceRateLimit(req, res))) return;
   const parsed = CreateJobBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Choose a supported source format and quality." });
@@ -226,6 +236,7 @@ mediaRouter.post("/jobs", async (req, res) => {
       error: null,
     };
     jobs.set(job.id, job);
+    await redis.set(mediaJobsCacheKey(job.id), job, { ex: RETENTION_HOURS * 60 * 60 });
     await db.insert(mediaJobs).values({
       id: job.id,
       visitorId: req.ip || "anonymous",
@@ -248,6 +259,7 @@ mediaRouter.post("/jobs", async (req, res) => {
       if (!current) return;
       const completedJob = { ...current, status: "completed" as const, progress: 100, size: "Source file", downloadUrl: current.url };
       jobs.set(job.id, completedJob);
+      await redis.set(mediaJobsCacheKey(job.id), completedJob, { ex: RETENTION_HOURS * 60 * 60 });
       await db.update(mediaJobs).set({ status: completedJob.status, progress: completedJob.progress, size: completedJob.size, downloadUrl: completedJob.downloadUrl }).where(eq(mediaJobs.id, job.id));
     }, 1400);
 
@@ -269,6 +281,11 @@ mediaRouter.get("/jobs/:id", async (req, res) => {
     res.json(GetJobResponse.parse(job));
     return;
   }
+  const cachedJob = await redis.get<MediaJob>(mediaJobsCacheKey(params.data.id));
+  if (cachedJob) {
+    res.json(GetJobResponse.parse(cachedJob));
+    return;
+  }
   const [stored] = await db.select().from(mediaJobs).where(eq(mediaJobs.id, params.data.id));
   if (!stored) {
     res.status(404).json({ error: "Job not found." });
@@ -279,12 +296,18 @@ mediaRouter.get("/jobs/:id", async (req, res) => {
 
 mediaRouter.delete("/jobs/:id", async (req, res) => {
   const params = DeleteJobParams.safeParse(req.params);
-  if (!params.success || !jobs.has(params.data.id)) {
+  if (!params.success) {
+    res.status(404).json({ error: "Job not found." });
+    return;
+  }
+  const existsInMemory = jobs.has(params.data.id);
+  const [deleted] = await db.delete(mediaJobs).where(eq(mediaJobs.id, params.data.id)).returning({ id: mediaJobs.id });
+  if (!existsInMemory && !deleted) {
     res.status(404).json({ error: "Job not found." });
     return;
   }
   jobs.delete(params.data.id);
-  await db.delete(mediaJobs).where(eq(mediaJobs.id, params.data.id));
+  await redis.del(mediaJobsCacheKey(params.data.id));
   res.status(204).send();
 });
 
