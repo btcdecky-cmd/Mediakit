@@ -1,6 +1,6 @@
-# [Project name]
+# Free Media Toolkit
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A free, mobile-first media utility for analyzing public links, choosing an available output, and tracking temporary processing jobs.
 
 ## Run & Operate
 
@@ -22,15 +22,25 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/free-media-toolkit/src/` — consumer homepage, workspace, tools, and operations views.
+- `artifacts/api-server/src/routes/providers.ts` — provider registry and capability metadata.
+- `artifacts/api-server/src/routes/media.ts` — safe URL analysis and temporary job lifecycle.
+- `lib/api-spec/openapi.yaml` — source of truth for API contracts.
+- `lib/api-client-react/src/generated/` and `lib/api-zod/src/generated/` — generated client and validation types.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Provider support is allowlist-driven and each provider advertises whether it is enabled; unreviewed platform adapters stay disabled instead of pretending to work.
+- The first processing path supports safe direct public media URLs as temporary pass-through jobs; platform extraction and FFmpeg transforms remain separate adapter/worker concerns.
+- URL validation rejects private and link-local hostnames before any future worker or fetch layer can access them.
+- The workspace is intentionally account-free and uses a short retention window for temporary job metadata and files.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Homepage: paste and analyze a public URL, inspect detected media metadata, and select an available output.
+- Workspace: monitor temporary jobs, see progress and expiry, download completed items, and delete jobs.
+- Tools: browse planned video, image, and audio utilities.
+- Admin: review queue summary, provider readiness, and recent jobs.
 
 ## User preferences
 
@@ -38,7 +48,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Regenerate client and Zod helpers with `pnpm --filter @workspace/api-spec run codegen` after changing `lib/api-spec/openapi.yaml`.
+- The generated React client needs `dom.iterable` in its TypeScript lib list because Orval normalizes `Headers.entries()`.
+- API ad hoc checks must go through the shared proxy at `http://localhost:80/api/...`, not the service port directly.
 
 ## Pointers
 

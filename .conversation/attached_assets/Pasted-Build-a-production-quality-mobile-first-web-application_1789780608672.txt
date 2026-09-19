@@ -1,0 +1,461 @@
+Build a production-quality, mobile-first web application called [YOUR BRAND NAME] — a completely free universal media downloader and media toolkit inspired by services like TTGet, but with a cleaner UI, stronger architecture, and significantly more functionality.
+
+PRODUCT GOAL
+
+Create a fast, modern platform where users can paste a publicly accessible media URL and download or process the media when permitted by the source platform.
+
+The core service must be free for users:
+
+* No subscription
+* No credits
+* No payment system
+* No mandatory account
+* No artificial download limits in the application
+
+Do not implement DRM bypassing, private-account extraction, paywall bypassing, or other access-control circumvention. Respect platform terms and copyright restrictions.
+
+SUPPORTED SOURCES
+
+Design the architecture around a modular provider/adapter system so additional platforms can be added without rewriting the application.
+
+Initial providers should target publicly accessible content from platforms such as:
+
+* TikTok
+* Instagram
+* YouTube
+* Facebook
+* X/Twitter
+* Reddit
+* Pinterest
+* Snapchat
+* Vimeo
+* Twitch
+* Threads
+* LinkedIn
+* CapCut
+* Douyin
+* Direct media URLs
+
+Only enable providers that can legally and technically operate with the relevant platform’s current rules.
+
+HOMEPAGE
+
+Create a premium, minimal, modern interface.
+
+Hero:
+
+Download. Convert. Create. All Free.
+
+Subtitle:
+
+Paste a media link and turn publicly accessible content into the format you need.
+
+Large URL input:
+
+Paste a video, image or media URL…
+
+Buttons:
+
+* Analyze
+* Paste from Clipboard
+
+Below the input show supported platforms as compact icons.
+
+Include:
+
+* Recent popular tools
+* How it works
+* Supported platforms
+* Media tools
+* Privacy section
+* FAQ
+* Footer
+
+The interface should feel substantially more polished than a basic downloader website.
+
+URL ANALYZER
+
+When a user submits a URL:
+
+1. Validate the URL.
+2. Detect the platform.
+3. Detect available media.
+4. Retrieve metadata where permitted:
+    * title
+    * thumbnail
+    * duration
+    * author/uploader
+    * media type
+    * available qualities
+5. Display available options.
+6. Let the user select the desired format and quality.
+7. Create a processing job.
+8. Process the media on a backend worker.
+9. Return a temporary download link.
+10. Automatically delete temporary files after a short retention period.
+
+Never expose server credentials, API keys, storage credentials, or internal worker URLs to the browser.
+
+DOWNLOAD OPTIONS
+
+Where the source provides the relevant formats:
+
+Video:
+
+* 4K
+* 1440p
+* 1080p
+* 720p
+* 480p
+* 360p
+
+Audio:
+
+* MP3
+* M4A
+* WAV
+
+Other:
+
+* Original
+* WebM
+* MP4
+* GIF
+* Thumbnail/image
+
+Do not display a quality that is not actually available.
+
+MEDIA TOOLKIT
+
+Create a dedicated /tools section.
+
+Tools:
+
+Video
+
+* Video downloader
+* Video converter
+* Video compressor
+* Video trimmer
+* Video resizer
+* Video-to-GIF
+* Video thumbnail extractor
+* Audio extractor
+* Video/audio merger
+
+Image
+
+* Image downloader
+* Image converter
+* Image compressor
+* Image resizer
+* Image format converter
+
+Audio
+
+* Audio extractor
+* Audio converter
+* Audio compressor
+
+Use FFmpeg for server-side media processing where appropriate.
+
+MEDIA WORKSPACE
+
+Create a workspace where users can manage temporary processing jobs.
+
+Dashboard:
+
+My Media
+
+Sections:
+
+* Processing
+* Completed
+* Converted
+* Downloads
+
+Each media item should show:
+
+* Thumbnail
+* Filename
+* Type
+* Size
+* Status
+* Download button
+* Delete button
+
+Temporary files must automatically expire.
+
+Account creation should remain optional.
+
+BATCH PROCESSING
+
+Allow users to submit multiple permitted public URLs.
+
+Display:
+
+Batch Processing
+URL 1   ✓
+URL 2   Processing
+URL 3   Waiting
+URL 4   ✓
+[Download Completed]
+
+Use background jobs rather than processing everything in the HTTP request.
+
+BACKEND ARCHITECTURE
+
+Use:
+
+Frontend:
+
+* SvelteKit
+* TypeScript
+* Tailwind CSS
+
+Backend:
+
+* Node.js
+* TypeScript
+* REST API
+
+Database:
+
+* PostgreSQL / Supabase
+
+Queue:
+
+* Redis
+* BullMQ
+
+Media:
+
+* FFmpeg
+* Modular source adapters/providers
+
+Storage:
+
+* Object storage with temporary files
+* Automatic expiration/deletion
+
+Architecture:
+
+Browser
+   ↓
+SvelteKit
+   ↓
+API
+   ↓
+URL Validator
+   ↓
+Provider Adapter
+   ↓
+Job Queue
+   ↓
+Media Worker
+   ↓
+FFmpeg
+   ↓
+Temporary Object Storage
+   ↓
+Temporary Download URL
+   ↓
+User
+
+API
+
+Create clean endpoints such as:
+
+POST /api/analyze
+POST /api/jobs
+GET  /api/jobs/:id
+POST /api/convert
+POST /api/compress
+POST /api/trim
+POST /api/gif
+DELETE /api/jobs/:id
+
+Use validation, rate limiting, request size limits and proper error handling.
+
+Return structured JSON.
+
+SECURITY
+
+Implement:
+
+* URL validation
+* SSRF protection
+* Domain/provider allowlists
+* Rate limiting
+* Abuse protection
+* File-size limits
+* Processing-time limits
+* MIME-type validation
+* Malware-safe file handling
+* Temporary signed download URLs
+* Automatic file deletion
+* Authentication only where necessary
+* Secure HTTP headers
+* Server-side secrets
+* Logging and monitoring
+
+Never allow arbitrary users to make the server access unrestricted internal/private network addresses.
+
+ADMIN DASHBOARD
+
+Create a separate /admin interface.
+
+Admin features:
+
+Dashboard:
+
+* Total requests
+* Successful jobs
+* Failed jobs
+* Active jobs
+* Processing time
+* Bandwidth
+* Storage usage
+* Platform usage
+
+Jobs:
+
+* Search jobs
+* Filter by platform
+* View status
+* View errors
+* Cancel jobs
+* Retry failed jobs
+
+Providers:
+
+* Enable/disable provider
+* Provider health status
+* Error rate
+* Last successful request
+
+System:
+
+* Queue status
+* Worker status
+* Storage status
+* API health
+* Error logs
+
+Do not expose admin functionality to normal users.
+
+DESIGN
+
+Use a premium modern SaaS aesthetic.
+
+Requirements:
+
+* Mobile-first
+* Extremely fast
+* Responsive
+* Dark/light mode
+* Smooth animations
+* Large URL input
+* Clear download buttons
+* Excellent empty states
+* Skeleton loading
+* Progress indicators
+* Toast notifications
+* Accessible UI
+* Keyboard navigation
+
+Avoid clutter, excessive gradients, oversized cards and generic AI-generated design.
+
+The homepage should immediately communicate:
+
+Paste → Analyze → Choose → Download
+
+ERROR HANDLING
+
+Create useful errors such as:
+
+Unsupported URL
+“This platform isn’t currently supported.”
+
+Private content
+“This content isn’t publicly accessible.”
+
+Unavailable media
+“The media couldn’t be retrieved from the source.”
+
+Processing error
+“Something went wrong while processing this file. Please try again.”
+
+Never expose stack traces or internal errors to users.
+
+PERFORMANCE
+
+Optimize aggressively:
+
+* CDN delivery
+* Streaming where appropriate
+* Background workers
+* Redis job queue
+* Lazy loading
+* Image optimization
+* Automatic temporary-file cleanup
+* Concurrent workers with controlled limits
+* Caching metadata where legally and technically appropriate
+
+Do not load heavy media-processing libraries into the browser.
+
+SEO
+
+Create optimized pages for:
+
+* Video Downloader
+* TikTok Downloader
+* Instagram Downloader
+* YouTube Downloader
+* Twitter/X Downloader
+* Facebook Downloader
+* Video Converter
+* MP3 Converter
+* Video Compressor
+* GIF Maker
+
+Each page should have unique metadata, useful explanatory content and proper canonical URLs.
+
+Do not use misleading SEO claims.
+
+PRIVACY
+
+Clearly explain:
+
+* What data is processed
+* How URLs are handled
+* How long temporary files remain
+* That temporary media is automatically deleted
+* Whether analytics are collected
+
+Do not claim “we collect nothing” unless the implementation actually does so.
+
+IMPORTANT DEVELOPMENT RULE
+
+Build the application as a real full-stack system, not a static frontend mockup.
+
+Do not fake download results.
+
+Use interfaces/abstractions for media providers so each provider can be implemented, tested, disabled or replaced independently.
+
+Start with the core MVP:
+
+1. Homepage
+2. URL analyzer
+3. Provider architecture
+4. Job queue
+5. FFmpeg worker
+6. Download result page
+7. Basic media conversion
+8. Temporary storage
+9. Security/rate limiting
+10. Admin dashboard
+
+Then expand to additional platforms and media tools.
+
+The final product should feel like a serious, scalable alternative to basic downloader websites while keeping the core user experience completely free.

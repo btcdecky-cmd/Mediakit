@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Public media analysis and temporary processing jobs API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: media
+    description: Public media analysis and processing jobs
+  - name: providers
+    description: Supported source providers
+  - name: dashboard
+    description: Usage summary
 paths:
   /healthz:
     get:
@@ -24,7 +30,137 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /analyze:
+    post:
+      operationId: analyzeMedia
+      tags: [media]
+      summary: Analyze a public media URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeInput"
+      responses:
+        "200":
+          description: Media analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAnalysis"
+        "400":
+          description: Invalid or unsupported URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [media]
+      summary: List temporary media jobs
+      responses:
+        "200":
+          description: Temporary jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MediaJob"
+    post:
+      operationId: createJob
+      tags: [media]
+      summary: Create a temporary media processing job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaJob"
+        "400":
+          description: Invalid job request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [media]
+      summary: Get a temporary media job
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaJob"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteJob
+      tags: [media]
+      summary: Delete a temporary media job
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "204":
+          description: Job deleted
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /providers:
+    get:
+      operationId: listProviders
+      tags: [providers]
+      summary: List provider capabilities
+      responses:
+        "200":
+          description: Provider capability list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Provider"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get temporary workspace summary
+      responses:
+        "200":
+          description: Workspace summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
 components:
+  parameters:
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +169,178 @@ components:
           type: string
       required:
         - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    AnalyzeInput:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 8
+      required: [url]
+    JobInput:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 8
+        format:
+          type: string
+          enum: [mp4, webm, mp3, m4a, wav, original, thumbnail]
+        quality:
+          type: string
+          enum: [source, 2160p, 1440p, 1080p, 720p, 480p, 360p]
+      required: [url, format, quality]
+    MediaOption:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        kind:
+          type: string
+          enum: [video, audio, image]
+        format:
+          type: string
+        quality:
+          type: string
+        size:
+          type: string
+      required: [id, label, kind, format, quality]
+    MediaAnalysis:
+      type: object
+      properties:
+        url:
+          type: string
+        canonicalUrl:
+          type: string
+        provider:
+          type: string
+        providerLabel:
+          type: string
+        supported:
+          type: boolean
+        title:
+          type: string
+        author:
+          type: string
+        duration:
+          type: string
+        mediaType:
+          type: string
+          enum: [video, audio, image, unknown]
+        thumbnail:
+          type: ["string", "null"]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaOption"
+        message:
+          type: string
+      required:
+        - url
+        - canonicalUrl
+        - provider
+        - providerLabel
+        - supported
+        - title
+        - author
+        - duration
+        - mediaType
+        - thumbnail
+        - options
+        - message
+    MediaJob:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        provider:
+          type: string
+        title:
+          type: string
+        format:
+          type: string
+        quality:
+          type: string
+        status:
+          type: string
+          enum: [processing, completed, failed, expired]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        size:
+          type: string
+        createdAt:
+          type: string
+        expiresAt:
+          type: string
+        downloadUrl:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+      required:
+        - id
+        - url
+        - provider
+        - title
+        - format
+        - quality
+        - status
+        - progress
+        - size
+        - createdAt
+        - expiresAt
+        - downloadUrl
+        - error
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        domains:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        accent:
+          type: string
+        note:
+          type: string
+      required: [id, label, domains, enabled, accent, note]
+    DashboardSummary:
+      type: object
+      properties:
+        totalJobs:
+          type: integer
+        completedJobs:
+          type: integer
+        processingJobs:
+          type: integer
+        savedBytes:
+          type: string
+        retentionHours:
+          type: integer
+        providerCount:
+          type: integer
+      required:
+        - totalJobs
+        - completedJobs
+        - processingJobs
+        - savedBytes
+        - retentionHours
+        - providerCount
 

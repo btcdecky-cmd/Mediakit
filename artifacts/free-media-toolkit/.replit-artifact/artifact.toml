@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Free Media Toolkit"
+description = "A free, mobile-first media downloader and toolkit for analyzing publicly accessible links, choosing available formats, and tracking temporary processing jobs."
+version = "1.0.0"
+id = "artifacts/free-media-toolkit"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22467
+
+[services.development]
+run = "pnpm --filter @workspace/free-media-toolkit run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/free-media-toolkit", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/free-media-toolkit/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22467"
+BASE_PATH = "/"
