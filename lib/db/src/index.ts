@@ -15,7 +15,14 @@ if (!connectionString) {
   );
 }
 
-export const pool = new Pool({ connectionString });
+const normalizedConnectionString = connectionString.replace(/[?&]sslmode=[^&]*/i, "");
+
+export const pool = new Pool({
+  connectionString: normalizedConnectionString,
+  ssl: process.env.POSTGRES_HOST || connectionString.includes("supabase")
+    ? { rejectUnauthorized: false }
+    : undefined,
+});
 export const db = drizzle(pool, { schema });
 
 export async function initializeDatabase() {

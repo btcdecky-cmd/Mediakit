@@ -191,9 +191,16 @@ mediaRouter.post("/analyze", async (req, res) => {
   }
 });
 
-mediaRouter.get("/jobs", async (_req, res) => {
+mediaRouter.get("/jobs", async (req, res) => {
   expireJobs();
-  const storedJobs = await db.select().from(mediaJobs).orderBy(desc(mediaJobs.createdAt));
+  let storedJobs: typeof mediaJobs.$inferSelect[] = [];
+  try {
+    storedJobs = await db.select().from(mediaJobs).orderBy(desc(mediaJobs.createdAt));
+  } catch (error) {
+    req.log?.error?.({ error }, "Failed to load jobs from Supabase");
+    res.status(503).json({ error: "The workspace is temporarily unavailable. Please try again." });
+    return;
+  }
   const memoryJobs = Array.from(jobs.values());
   const merged = [...memoryJobs, ...storedJobs.filter((stored) => !jobs.has(stored.id))].map((job) => ({
     ...job,
