@@ -12,6 +12,8 @@ import {
   ListJobsResponse,
 } from "@workspace/api-zod";
 import { providerDefinitions } from "./providers";
+import { db, mediaJobs } from "@workspace/db";
+import { desc, eq } from "drizzle-orm";
 
 type MediaOption = {
   id: string;
@@ -180,12 +182,19 @@ mediaRouter.post("/analyze", (req, res) => {
   }
 });
 
-mediaRouter.get("/jobs", (_req, res) => {
+mediaRouter.get("/jobs", async (_req, res) => {
   expireJobs();
-  res.json(ListJobsResponse.parse(Array.from(jobs.values()).reverse()));
+  const storedJobs = await db.select().from(mediaJobs).orderBy(desc(mediaJobs.createdAt));
+  const memoryJobs = Array.from(jobs.values());
+  const merged = [...memoryJobs, ...storedJobs.filter((stored) => !jobs.has(stored.id))].map((job) => ({
+    ...job,
+    createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
+    expiresAt: job.expiresAt instanceof Date ? job.expiresAt.toISOString() : job.expiresAt,
+  }));
+  res.json(ListJobsResponse.parse(merged));
 });
 
-mediaRouter.post("/jobs", (req, res) => {
+mediaRouter.post("/jobs", async (req, res) => {
   const parsed = CreateJobBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Choose a supported source format and quality." });
@@ -217,17 +226,29 @@ mediaRouter.post("/jobs", (req, res) => {
       error: null,
     };
     jobs.set(job.id, job);
+    await db.insert(mediaJobs).values({
+      id: job.id,
+      visitorId: req.ip || "anonymous",
+      url: job.url,
+      provider: job.provider,
+      title: job.title,
+      format: job.format,
+      quality: job.quality,
+      status: job.status,
+      progress: job.progress,
+      size: job.size,
+      createdAt: now,
+      expiresAt,
+      downloadUrl: job.downloadUrl,
+      error: job.error,
+    });
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const current = jobs.get(job.id);
       if (!current) return;
-      jobs.set(job.id, {
-        ...current,
-        status: "completed",
-        progress: 100,
-        size: "Source file",
-        downloadUrl: current.url,
-      });
+      const completedJob = { ...current, status: "completed" as const, progress: 100, size: "Source file", downloadUrl: current.url };
+      jobs.set(job.id, completedJob);
+      await db.update(mediaJobs).set({ status: completedJob.status, progress: completedJob.progress, size: completedJob.size, downloadUrl: completedJob.downloadUrl }).where(eq(mediaJobs.id, job.id));
     }, 1400);
 
     res.status(201).json(CreateJobResponse.parse(job));
@@ -236,7 +257,7 @@ mediaRouter.post("/jobs", (req, res) => {
   }
 });
 
-mediaRouter.get("/jobs/:id", (req, res) => {
+mediaRouter.get("/jobs/:id", async (req, res) => {
   const params = GetJobParams.safeParse(req.params);
   if (!params.success) {
     res.status(404).json({ error: "Job not found." });
@@ -244,20 +265,26 @@ mediaRouter.get("/jobs/:id", (req, res) => {
   }
   expireJobs();
   const job = jobs.get(params.data.id);
-  if (!job) {
+  if (job) {
+    res.json(GetJobResponse.parse(job));
+    return;
+  }
+  const [stored] = await db.select().from(mediaJobs).where(eq(mediaJobs.id, params.data.id));
+  if (!stored) {
     res.status(404).json({ error: "Job not found." });
     return;
   }
-  res.json(GetJobResponse.parse(job));
+  res.json(GetJobResponse.parse({ ...stored, createdAt: stored.createdAt.toISOString(), expiresAt: stored.expiresAt.toISOString() }));
 });
 
-mediaRouter.delete("/jobs/:id", (req, res) => {
+mediaRouter.delete("/jobs/:id", async (req, res) => {
   const params = DeleteJobParams.safeParse(req.params);
   if (!params.success || !jobs.has(params.data.id)) {
     res.status(404).json({ error: "Job not found." });
     return;
   }
   jobs.delete(params.data.id);
+  await db.delete(mediaJobs).where(eq(mediaJobs.id, params.data.id));
   res.status(204).send();
 });
 

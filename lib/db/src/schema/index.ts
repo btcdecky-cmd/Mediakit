@@ -17,4 +17,23 @@
 //   export type InsertPost = z.infer<typeof insertPostSchema>;
 //   export type Post = typeof postsTable.$inferSelect;
 
-export {}
+import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+
+export const mediaJobs = pgTable("media_jobs", {
+  id: uuid("id").primaryKey(),
+  visitorId: text("visitor_id").notNull(),
+  url: text("url").notNull(),
+  provider: text("provider").notNull(),
+  title: text("title").notNull(),
+  format: text("format").notNull(),
+  quality: text("quality").notNull(),
+  status: text("status").notNull(),
+  progress: integer("progress").notNull().default(0),
+  size: text("size"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  downloadUrl: text("download_url"),
+  error: text("error"),
+});
+
+export type MediaJobRecord = typeof mediaJobs.$inferSelect;
