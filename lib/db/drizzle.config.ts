@@ -1,8 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+const connectionString =
+  process.env.DATABASE_URL ??
+  process.env.POSTGRES_URL_NON_POOLING ??
+  process.env.POSTGRES_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL or POSTGRES_URL must be set");
 }
 
 export default defineConfig({
